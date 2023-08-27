@@ -8,13 +8,13 @@ from get_input_args import get_input_args
 
 
 def train(hyperparameters):
-    [models_arch, epochs, learning_rate, hidden_units, source_dir, checkpoint_path] = hyperparameters
+    [models_arch, epochs, learning_rate, hidden_units, gpu, source_dir, checkpoint_path] = hyperparameters
 
     if models_arch == 'vgg16':
-        model = models.vgg16(weights=True)
+        model = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
         input_nodes = model.classifier[0].in_features
     elif models_arch == 'alexnet':
-        model = models.alexnet(weights=True)
+        model = models.alexnet(weights=models.AlexNet_Weights.IMAGENET1K_V1)
         input_nodes = model.classifier[1].in_features
 
     with open('cat_to_name.json', 'r') as f:
@@ -40,8 +40,17 @@ def train(hyperparameters):
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
 
-    print('is CUDA available?', torch.cuda.is_available())
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if gpu == 'gpu': 
+        print('User chooses GPU training')
+        if torch.cuda.is_available():
+            print('CUDA is available, using GPU')
+            device = 'cuda'
+        else:
+            print('CUDA is unavailable, using CPU instead')
+            device = 'cpu'
+    else:
+        print('User chooses CPU training')
+        device = 'cpu'
     model.to(device)
 
     print('----- Starting training -----')
@@ -153,16 +162,17 @@ def main():
     epochs = input_args.epochs
     learning_rate = input_args.learning_rate
     hidden_units = input_args.hidden_units # 512
-    # gpu = input_args.gpu
+    gpu = input_args.gpu
     source_dir = input_args.source_dir
     checkpoint_path = input_args.checkpoint_path
-    hyperparameters  = [models_arch, epochs, learning_rate, hidden_units, source_dir, checkpoint_path]
+    hyperparameters  = [models_arch, epochs, learning_rate, hidden_units, gpu, source_dir, checkpoint_path]
 
     print('----- The Input Arguments -----')
     print('pre-trained model --arch:', models_arch)
     print('epochs --epochs:', epochs)
     print('learning_rate --learning_rate:', learning_rate)
     print('hidden_units --hidden_units:', hidden_units)
+    print('using GPU/CPU --gpu:', gpu)
     print('source_dir --source_dir:', source_dir)
     print('checkpoint_path --save:', checkpoint_path)
     print('Start training using these settings above...')

@@ -44,11 +44,21 @@ def process_image(image):
     return output_image
 
 
-def predict(image_path, checkpoint_path, models_arch, topk=5):
+def predict(image_path, checkpoint_path, models_arch, gpu, topk=5):
     model, class_to_idx = load_checkpoint(checkpoint_path, models_arch)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # print("---device---", device)
+    if gpu == 'gpu': 
+        print('User chooses GPU predicting')
+        if torch.cuda.is_available():
+            print('CUDA is available, using GPU')
+            device = 'cuda'
+        else:
+            print('CUDA is unavailable, using CPU instead')
+            device = 'cpu'
+    else:
+        print('User chooses CPU predicting')
+        device = 'cpu'
+    model.to(device)
     
     with Image.open(image_path) as image: 
         process_image_data = process_image(image)
@@ -79,13 +89,10 @@ def load_checkpoint(checkpoint_path, models_arch):
     checkpoint = torch.load(checkpoint_path)
 
     if models_arch == 'vgg16':
-        model = models.vgg16(weights=True)
+        model = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
     elif models_arch == 'alexnet':
-        model = models.alexnet(weights=True)
+        model = models.alexnet(weights=models.AlexNet_Weights.IMAGENET1K_V1)
 
-    # epochs = checkpoint['epochs']
-    # learning_rate = checkpoint['learning_rate']
-    # model = checkpoint['model']
     model.classifier = checkpoint['model_classifier']
     model.load_state_dict = checkpoint['model_state_dict']
     model.optimizer = checkpoint['optimizer_state_dict']
@@ -114,18 +121,20 @@ def main():
     input_args = get_input_args()
 
     models_arch = input_args.arch
+    gpu = input_args.gpu
     checkpoint_path = input_args.checkpoint_path
     img_path = input_args.image_path
 
     print('----- The Input Arguments -----')
     print('pre-trained model --arch:', models_arch)
+    print('using GPU/CPU --gpu:', gpu)
     print('checkpoint_path --save:', checkpoint_path)
     print('image_path --predict:', img_path)
 
     with open('cat_to_name.json', 'r') as f:
         cat_to_name = json.load(f)
 
-    predict_probs, predict_classes = predict(img_path, checkpoint_path, models_arch)
+    predict_probs, predict_classes = predict(img_path, checkpoint_path, models_arch, gpu)
 
     print('----- The Prediction Results -----')
     print('File selected: ' + img_path)
